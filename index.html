@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ኢትዮ ሞደርን - የዕድል ዕጣ እና መገናኛ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #6366f1; --accent: #f43f5e; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #74ebd5, #9face6); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .card { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); width: 100%; max-width: 450px; text-align: center; }
+        input, textarea { width: 90%; padding: 12px; margin: 10px 0; border: 2px solid #e2e8f0; border-radius: 12px; transition: 0.3s; }
+        .btn { padding: 12px 25px; cursor: pointer; border: none; border-radius: 50px; font-weight: bold; margin: 5px; color: white; background: var(--primary); }
+        #wheel { font-size: 24px; font-weight: bold; color: var(--accent); height: 50px; border: 2px dashed var(--accent); margin: 20px 0; display: flex; align-items: center; justify-content: center; }
+        .contact-section a { color: #2563eb; text-decoration: none; font-weight: bold; }
+        .msg-box { background: #f1f5f9; padding: 10px; margin: 5px 0; border-radius: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🎁 የኢትዮ ሞደርን ዕጣ</h1>
+    <input type="text" id="name" placeholder="ሙሉ ስም">
+    <input type="tel" id="phone" placeholder="ስልክ ቁጥር">
+    <a href="https://telebirr.et/" target="_blank" style="display:block; margin: 10px 0; color: #059669;">ወደ ቴሌብር ክፍያ ይሂዱ</a>
+    <button class="btn" onclick="registerUser()">ይመዝገቡና ይክፈሉ</button>
+
+    <div id="admin-panel" style="margin-top:20px; border-top: 2px solid #eee; padding-top:20px;">
+        <button class="btn" style="background:var(--accent);" onclick="startWheel()">እጣ አውጣ (Spin)</button>
+        <div id="wheel">---</div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <textarea id="msgText" placeholder="መልእክትዎን እዚህ ይጻፉ..."></textarea>
+        <input type="file" id="mediaInput" accept="image/*,video/*,audio/*" capture="environment">
+        <button class="btn" onclick="sendMessage()">ላክ</button>
+    </div>
+
+    <div class="contact-section" style="margin-top:20px; font-size: 0.85em; text-align: left;">
+        <p><i class="fas fa-phone"></i> ስልክ: <a href="tel:0914642554">0914642554</a></p>
+        <p><i class="fas fa-envelope"></i> ኢሜይል: <a href="mailto:jman47732@gmail.com">jman47732@gmail.com</a></p>
+        <p><i class="fab fa-telegram"></i> ቴሌግራም: <a href="https://t.me/@jman47732" target="_blank">@jman47732</a></p>
+          <p><i class="fas fa-globe"></i> ድረ-ገጽ: <a href="https://ethiomoderne.netlify.app" target="_blank">ethiomoderne.netlify.app</a></p>
+    </div>
+
+    <div id="msgList" style="margin-top:20px;"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyB0fmrZeve8D4C8h6nHOU8v7tO1SYGqpTw",
+        authDomain: "student-regeneration-system.firebaseapp.com",
+        projectId: "student-regeneration-system",
+        storageBucket: "student-regeneration-system.firebasestorage.app",
+        messagingSenderId: "309660267926",
+        appId: "G-HS5R8GND6V"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    function registerUser() {
+        const name = document.getElementById('name').value;
+        const phone = document.getElementById('phone').value;
+        if(!name) return alert("ስም ይሙሉ");
+        db.collection("participants").add({ name, phone }).then(() => alert("ተመዝግበዋል!"));
+    }
+
+    async function startWheel() {
+        const snapshot = await db.collection("participants").get();
+        const participants = snapshot.docs.map(doc => doc.data());
+        if (participants.length === 0) return alert("ተመዝጋቢ የለም");
+        
+        const wheel = document.getElementById('wheel');
+        let i = 0;
+        const interval = setInterval(() => { wheel.innerText = participants[i % participants.length].name; i++; }, 100);
+        setTimeout(() => { clearInterval(interval); const winner = participants[Math.floor(Math.random() * participants.length)]; wheel.innerText = "አሸናፊ: " + winner.name; }, 3000);
+    }
+
+    function sendMessage() {
+        const text = document.getElementById('msgText').value;
+        const file = document.getElementById('mediaInput').files[0];
+        if (file) {
+            storage.ref('uploads/' + file.name).put(file).then(s => s.ref.getDownloadURL()).then(url => {
+                db.collection("messages").add({ text, url, date: new Date() }).then(() => location.reload());
+            });
+        } else {
+            db.collection("messages").add({ text, date: new Date() }).then(() => location.reload());
+        }
+    }
+
+    db.collection("messages").orderBy("date", "desc").onSnapshot(s => {
+        const list = document.getElementById('msgList');
+        list.innerHTML = "";
+        s.forEach(d => {
+            const data = d.data();
+            list.innerHTML += `<div class="msg-box">${data.text || ""} ${data.url ? `<br><a href="${data.url}" target="_blank">ፋይል</a>` : ""}</div>`;
+        });
+    });
+</script>
+</body>
+</html>
